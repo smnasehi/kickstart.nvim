@@ -144,7 +144,6 @@ vim.opt.splitbelow = true
 --  and `:help 'listchars'`
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
 
@@ -153,6 +152,7 @@ vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
+vim.opt.termguicolors = true
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -202,6 +202,12 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   callback = function()
     vim.highlight.on_yank()
   end,
+})
+
+--NOTE: Removes trailing whitespaces upon buffer save
+vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
+  pattern = { '*' },
+  command = [[%s/\s\+$//e]],
 })
 
 -- [[ Install `lazy.nvim` plugin manager ]]
@@ -257,6 +263,182 @@ require('lazy').setup({
       },
     },
   },
+  {
+    'kevinhwang91/nvim-ufo',
+    dependencies = { 'kevinhwang91/promise-async' },
+  },
+  {
+    'mcchrish/zenbones.nvim',
+    dependencies = { 'rktjmp/lush.nvim' },
+  },
+  {
+    'cuducos/yaml.nvim',
+    ft = { 'yaml' }, -- optional
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-telescope/telescope.nvim', -- optional
+    },
+  },
+  {
+    'chrisgrieser/nvim-various-textobjs',
+    lazy = false,
+    opts = { useDefaultKeymaps = true },
+  },
+  {
+    'karb94/neoscroll.nvim',
+    config = function()
+      require('neoscroll').setup {}
+    end,
+  },
+  {
+    'kylechui/nvim-surround',
+    version = '*', -- Use for stability; omit to use `main` branch for the latest features
+    event = 'VeryLazy',
+    config = function()
+      require('nvim-surround').setup {
+        -- Configuration here, or leave empty to use defaults
+      }
+    end,
+  },
+  {
+    'bluz71/vim-nightfly-colors',
+    name = 'nightfly',
+    lazy = false,
+    priority = 1000,
+  },
+  {
+    'kchmck/vim-coffee-script',
+  },
+  {
+    'tanvirtin/vgit.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function() -- This is the function that runs, AFTER loading
+      require('vgit').setup {}
+    end,
+  },
+  {
+    'RRethy/nvim-treesitter-endwise',
+    config = function()
+      require('nvim-treesitter.configs').setup {
+        endwise = { enable = true },
+      }
+    end,
+  },
+  {
+    'ibhagwan/fzf-lua',
+    -- optional for icon support
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      -- calling `setup` is optional for customization
+      require('fzf-lua').setup {}
+    end,
+  },
+  {
+    'nvim-neotest/neotest',
+    dependencies = {
+      'nvim-neotest/nvim-nio',
+      'nvim-lua/plenary.nvim',
+      'antoinemadec/FixCursorHold.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'olimorris/neotest-rspec',
+    },
+    config = function() -- This is the function that runs, AFTER loading
+      require('neotest').setup {
+        adapters = {
+          require 'neotest-rspec' {
+            rspec_cmd = function()
+              return vim.tbl_flatten {
+                'docker',
+                'compose',
+                'exec',
+                'portal',
+                'bin/rspec',
+              }
+            end,
+            transform_spec_path = function(path)
+              local prefix = require('neotest-rspec').root(path)
+              return string.sub(path, string.len(prefix) + 2, -1)
+            end,
+
+            results_path = 'tmp/rspec.output',
+          },
+        },
+        output = {
+          enabled = true,
+          open_on_run = 'short',
+        },
+        output_panel = {
+          enabled = true,
+          open = 'botright split | resize 15',
+        },
+      }
+    end,
+    keys = {
+      {
+        '<leader>tt',
+        function()
+          require('neotest').run.run(vim.fn.expand '%')
+        end,
+        desc = 'Run File',
+      },
+      {
+        '<leader>ta',
+        function()
+          require('neotest').run.attach()
+        end,
+        desc = 'Attach To Running Test',
+      },
+      {
+        '<leader>tT',
+        function()
+          require('neotest').run.run(vim.uv.cwd())
+        end,
+        desc = 'Run All Test Files',
+      },
+      {
+        '<leader>tr',
+        function()
+          require('neotest').run.run()
+        end,
+        desc = 'Run Nearest',
+      },
+      {
+        '<leader>tl',
+        function()
+          require('neotest').run.run_last()
+        end,
+        desc = 'Run Last',
+      },
+      {
+        '<leader>ts',
+        function()
+          require('neotest').summary.toggle()
+        end,
+        desc = 'Toggle Summary',
+      },
+      {
+        '<leader>to',
+        function()
+          require('neotest').output.open { enter = true, auto_close = true }
+        end,
+        desc = 'Show Output',
+      },
+      {
+        '<leader>tO',
+        function()
+          require('neotest').output_panel.toggle()
+        end,
+        desc = 'Toggle Output Panel',
+      },
+      {
+        '<leader>tS',
+        function()
+          require('neotest').run.stop()
+        end,
+        desc = 'Stop',
+      },
+    },
+  },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -273,6 +455,48 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
 
+  {
+    'folke/zen-mode.nvim',
+    config = function()
+      local loaded, zenmode = pcall(require, 'zen-mode')
+      if not loaded then
+        return
+      end
+
+      zenmode.setup {
+        window = {
+          backdrop = 0.95, -- shade the backdrop of the Zen window. Set to 1 to keep the same as Normal
+          -- height and width can be:
+          -- * an absolute number of cells when > 1
+          -- * a percentage of the width / height of the editor when <= 1
+          -- * a function that returns the width or the height
+          width = 0.85, -- width of the Zen window
+          height = 1, -- height of the Zen window
+          -- by default, no options are changed for the Zen window
+          -- uncomment any of the options below, or add other vim.wo options you want to apply
+          options = {
+            -- signcolumn = "no", -- disable signcolumn
+            -- number = false, -- disable number column
+            -- relativenumber = false, -- disable relative numbers
+            -- cursorline = false, -- disable cursorline
+            -- cursorcolumn = false, -- disable cursor column
+            -- foldcolumn = "0", -- disable fold column
+            -- list = false, -- disable whitespace characters
+          },
+        },
+        plugins = {
+          options = {
+            enabled = true,
+            ruler = false, -- disables the ruler text in the cmd line area
+            showcmd = false, -- disables the command in the last line of the screen
+          },
+          twilight = { enabled = true }, -- enable to start Twilight when zen mode opens
+          gitsigns = { enabled = false }, -- disables git signs
+          tmux = { enabled = true }, -- disables the tmux statusline
+        },
+      }
+    end,
+  },
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -564,6 +788,7 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+      local lspconfig_util = require 'lspconfig.util'
       local servers = {
         -- clangd = {},
         -- gopls = {},
@@ -592,6 +817,24 @@ require('lazy').setup({
             },
           },
         },
+        solargraph = {
+          cmd = {
+            'bundle',
+            'exec',
+            'solargraph',
+            'stdio',
+          },
+        },
+        -- ruby_lsp = {
+        --   mason = false,
+        --   cmd = { 'ruby-lsp' },
+        --   filetypes = { 'ruby' },
+        --   root_dir = lspconfig_util.root_pattern('Gemfile.dev', '.git'),
+        --   init_options = {
+        --     formatter = 'auto',
+        --   },
+        --   single_file_support = true,
+        -- },
       }
 
       -- Ensure the servers and tools above are installed
@@ -874,10 +1117,10 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
@@ -907,6 +1150,25 @@ require('lazy').setup({
     },
   },
 })
+
+-- Folding
+vim.o.foldcolumn = '1' -- '0' is not bad
+vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
+vim.o.foldlevelstart = 99
+vim.o.foldenable = true
+
+-- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
+vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
+vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+-- Option 3: treesitter as a main provider instead
+-- (Note: the `nvim-treesitter` plugin is *not* needed.)
+-- ufo uses the same query files for folding (queries/<lang>/folds.scm)
+-- performance and stability are better than `foldmethod=nvim_treesitter#foldexpr()`
+require('ufo').setup {
+  provider_selector = function(bufnr, filetype, buftype)
+    return { 'treesitter', 'indent' }
+  end,
+}
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
